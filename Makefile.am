@@ -8,28 +8,29 @@ AUTOMAKE_OPTIONS = foreign
 # the right time.
 SUBDIRS = . src
 
-# Always include gtest in distributions.
+# Always include gmock in distributions.
 DIST_SUBDIRS = $(subdirs) src conformance
 
-# Build gtest before we build protobuf tests.  We don't add gtest to SUBDIRS
-# because then "make check" would also build and run all of gtest's own tests,
+# Build gmock before we build protobuf tests.  We don't add gmock to SUBDIRS
+# because then "make check" would also build and run all of gmock's own tests,
 # which takes a lot of time and is generally not useful to us.  Also, we don't
-# want "make install" to recurse into gtest since we don't want to overwrite
-# the installed version of gtest if there is one.
+# want "make install" to recurse into gmock since we don't want to overwrite
+# the installed version of gmock if there is one.
 check-local:
-	@echo "Making lib/libgtest.a lib/libgtest_main.a in gtest"
-	@cd gtest && $(MAKE) $(AM_MAKEFLAGS) lib/libgtest.la lib/libgtest_main.la
+	@echo "Making lib/libgmock.a lib/libgmock_main.a in gmock"
+	@cd gmock && $(MAKE) $(AM_MAKEFLAGS) lib/libgmock.la lib/libgmock_main.la
+	@cd gmock/gtest && $(MAKE) $(AM_MAKEFLAGS) lib/libgtest.la lib/libgtest_main.la
 
-# We would like to clean gtest when "make clean" is invoked.  But we have to
+# We would like to clean gmock when "make clean" is invoked.  But we have to
 # be careful because clean-local is also invoked during "make distclean", but
-# "make distclean" already recurses into gtest because it's listed among the
-# DIST_SUBDIRS.  distclean will delete gtest/Makefile, so if we then try to
+# "make distclean" already recurses into gmock because it's listed among the
+# DIST_SUBDIRS.  distclean will delete gmock/Makefile, so if we then try to
 # cd to the directory again and "make clean" it will fail.  So, check that the
 # Makefile exists before recursing.
 clean-local:
-	@if test -e gtest/Makefile; then \
-	  echo "Making clean in gtest"; \
-	  cd gtest && $(MAKE) $(AM_MAKEFLAGS) clean; \
+	@if test -e gmock/Makefile; then \
+	  echo "Making clean in gmock"; \
+	  cd gmock && $(MAKE) $(AM_MAKEFLAGS) clean; \
 	fi; \
 	if test -e conformance/Makefile; then \
 	  echo "Making clean in conformance"; \
@@ -506,14 +507,10 @@ objectivec_EXTRA_DIST=                                                       \
   objectivec/GPBDictionary.h                                                 \
   objectivec/GPBDictionary.m                                                 \
   objectivec/GPBDictionary_PackagePrivate.h                                  \
-  objectivec/GPBExtensionField.h                                             \
-  objectivec/GPBExtensionField.m                                             \
-  objectivec/GPBExtensionField_PackagePrivate.h                              \
+  objectivec/GPBExtensionInternals.h                                         \
+  objectivec/GPBExtensionInternals.m                                         \
   objectivec/GPBExtensionRegistry.h                                          \
   objectivec/GPBExtensionRegistry.m                                          \
-  objectivec/GPBField.h                                                      \
-  objectivec/GPBField.m                                                      \
-  objectivec/GPBField_PackagePrivate.h                                       \
   objectivec/GPBMessage.h                                                    \
   objectivec/GPBMessage.m                                                    \
   objectivec/GPBMessage_PackagePrivate.h                                     \
@@ -523,7 +520,10 @@ objectivec_EXTRA_DIST=                                                       \
   objectivec/GPBRootObject.h                                                 \
   objectivec/GPBRootObject.m                                                 \
   objectivec/GPBRootObject_PackagePrivate.h                                  \
-  objectivec/GPBTypes.h                                                      \
+  objectivec/GPBRuntimeTypes.h                                               \
+  objectivec/GPBUnknownField.h                                               \
+  objectivec/GPBUnknownField.m                                               \
+  objectivec/GPBUnknownField_PackagePrivate.h                                \
   objectivec/GPBUnknownFieldSet.h                                            \
   objectivec/GPBUnknownFieldSet.m                                            \
   objectivec/GPBUnknownFieldSet_PackagePrivate.h                             \
@@ -547,8 +547,6 @@ objectivec_EXTRA_DIST=                                                       \
   objectivec/ProtocolBuffers_OSX.xcodeproj/xcshareddata/xcschemes/PerformanceTests.xcscheme \
   objectivec/ProtocolBuffers_OSX.xcodeproj/xcshareddata/xcschemes/ProtocolBuffers.xcscheme \
   objectivec/README.md                                                       \
-  objectivec/Tests/Filter1.txt                                               \
-  objectivec/Tests/Filter2.txt                                               \
   objectivec/Tests/golden_message                                            \
   objectivec/Tests/golden_packed_fields_message                              \
   objectivec/Tests/GPBARCUnittestProtos.m                                    \
@@ -564,7 +562,6 @@ objectivec_EXTRA_DIST=                                                       \
   objectivec/Tests/GPBDictionaryTests+UInt32.m                               \
   objectivec/Tests/GPBDictionaryTests+UInt64.m                               \
   objectivec/Tests/GPBDictionaryTests.pddm                                   \
-  objectivec/Tests/GPBFilteredMessageTests.m                                 \
   objectivec/Tests/GPBMessageTests+Merge.m                                   \
   objectivec/Tests/GPBMessageTests+Runtime.m                                 \
   objectivec/Tests/GPBMessageTests+Serialization.m                           \
@@ -583,21 +580,19 @@ objectivec_EXTRA_DIST=                                                       \
   objectivec/Tests/iOSTestHarness/en.lproj/InfoPlist.strings                 \
   objectivec/Tests/iOSTestHarness/Images.xcassets/AppIcon.appiconset/Contents.json      \
   objectivec/Tests/iOSTestHarness/Images.xcassets/AppIcon.appiconset/iPad6.png          \
-  objectivec/Tests/iOSTestHarness/Images.xcassets/AppIcon.appiconset/iPad6@2x.png       \
+  objectivec/Tests/iOSTestHarness/Images.xcassets/AppIcon.appiconset/iPad6_2x.png       \
   objectivec/Tests/iOSTestHarness/Images.xcassets/AppIcon.appiconset/iPad7.png          \
-  objectivec/Tests/iOSTestHarness/Images.xcassets/AppIcon.appiconset/iPad7@2x.png       \
+  objectivec/Tests/iOSTestHarness/Images.xcassets/AppIcon.appiconset/iPad7_2x.png       \
   objectivec/Tests/iOSTestHarness/Images.xcassets/AppIcon.appiconset/iPhone6.png        \
-  objectivec/Tests/iOSTestHarness/Images.xcassets/AppIcon.appiconset/iPhone6@2x.png     \
-  objectivec/Tests/iOSTestHarness/Images.xcassets/AppIcon.appiconset/iPhone7@2x.png     \
-  objectivec/Tests/iOSTestHarness/Images.xcassets/AppIcon.appiconset/iPhone7@3x.png     \
+  objectivec/Tests/iOSTestHarness/Images.xcassets/AppIcon.appiconset/iPhone6_2x.png     \
+  objectivec/Tests/iOSTestHarness/Images.xcassets/AppIcon.appiconset/iPhone7_2x.png     \
+  objectivec/Tests/iOSTestHarness/Images.xcassets/AppIcon.appiconset/iPhone7_3x.png     \
   objectivec/Tests/iOSTestHarness/Images.xcassets/LaunchImage.launchimage/Contents.json \
   objectivec/Tests/iOSTestHarness/Info.plist                                  \
   objectivec/Tests/iOSTestHarness/LaunchScreen.xib                            \
   objectivec/Tests/text_format_map_unittest_data.txt                          \
   objectivec/Tests/text_format_unittest_data.txt                              \
   objectivec/Tests/unittest_cycle.proto                                       \
-  objectivec/Tests/unittest_filter.proto                                      \
-  objectivec/Tests/unittest_name_mangling.proto                               \
   objectivec/Tests/unittest_objc.proto                                        \
   objectivec/Tests/unittest_runtime_proto2.proto                              \
   objectivec/Tests/unittest_runtime_proto3.proto                              \
@@ -741,39 +736,33 @@ ruby_EXTRA_DIST=                                                             \
 
 all_EXTRA_DIST=$(csharp_EXTRA_DIST) $(java_EXTRA_DIST) $(javanano_EXTRA_DIST) $(objectivec_EXTRA_DIST) $(python_EXTRA_DIST) $(ruby_EXTRA_DIST)
 
-EXTRA_DIST = $(@DIST_LANG@_EXTRA_DIST)                                       \
-  autogen.sh                                                                 \
-  generate_descriptor_proto.sh                                               \
-  README.md                                                                  \
-  INSTALL.txt                                                                \
-  LICENSE                                                                    \
-  CONTRIBUTORS.txt                                                           \
-  CHANGES.txt                                                                \
-  config.h.include                                                           \
-  editors/README.txt                                                         \
-  editors/proto.vim                                                          \
-  editors/protobuf-mode.el                                                   \
-  vsprojects/config.h                                                        \
-  vsprojects/google/protobuf/stubs/pbconfig.h                                \
-  vsprojects/extract_includes.bat                                            \
-  vsprojects/libprotobuf.vcproj                                              \
-  vsprojects/libprotobuf-lite.vcproj                                         \
-  vsprojects/libprotoc.vcproj                                                \
-  vsprojects/protobuf.sln                                                    \
-  vsprojects/protoc.vcproj                                                   \
-  vsprojects/readme.txt                                                      \
-  vsprojects/test_plugin.vcproj                                              \
-  vsprojects/tests.vcproj                                                    \
-  vsprojects/lite-test.vcproj                                                \
-  vsprojects/convert2008to2005.sh                                            \
-  examples/README.txt                                                        \
-  examples/Makefile                                                          \
-  examples/addressbook.proto                                                 \
-  examples/add_person.cc                                                     \
-  examples/list_people.cc                                                    \
-  examples/AddPerson.java                                                    \
-  examples/ListPeople.java                                                   \
-  examples/add_person.py                                                     \
+EXTRA_DIST = $(@DIST_LANG@_EXTRA_DIST) \
+  autogen.sh                           \
+  generate_descriptor_proto.sh         \
+  README.md                            \
+  INSTALL.txt                          \
+  LICENSE                              \
+  CONTRIBUTORS.txt                     \
+  CHANGES.txt                          \
+  update_file_lists.sh                 \
+  cmake/CMakeLists.txt                 \
+  cmake/libprotobuf.cmake              \
+  cmake/libprotobuf-lite.cmake         \
+  cmake/libprotoc.cmake                \
+  cmake/protoc.cmake                   \
+  cmake/README.md                      \
+  cmake/tests.cmake                    \
+  editors/README.txt                   \
+  editors/proto.vim                    \
+  editors/protobuf-mode.el             \
+  examples/README.txt                  \
+  examples/Makefile                    \
+  examples/addressbook.proto           \
+  examples/add_person.cc               \
+  examples/list_people.cc              \
+  examples/AddPerson.java              \
+  examples/ListPeople.java             \
+  examples/add_person.py               \
   examples/list_people.py
 
 # Deletes all the files generated by autogen.sh.
